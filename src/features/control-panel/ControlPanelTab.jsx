@@ -156,7 +156,7 @@ const ControlPanel = () => {
              {/* CPU */}
              <div className="status-row">
                 <span className="status-text">
-                  CPU ({systemHealth.cpu.percent.toFixed(1)}%)
+                  CPU ({systemHealth?.cpu?.percent ? systemHealth.cpu.percent.toFixed(1) : "0.0"}%)
                 </span>
                 <div className="track">
                   <div className="fill fill-cpu" style={{ width: `${Math.min(systemHealth.cpu.percent, 100)}%` }}></div>
