@@ -1,0 +1,250 @@
+/* =========================================
+   1. VARIABLES & THEME CONFIGURATION
+   ========================================= */
+:root {
+  /* -- Fonts: System Stack (Zero Latency) -- */
+  --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* -- Palette: "Cacao & Cobalt" -- */
+  --bg-app: #f2f0e9;         /* Very light "Oatmeal" beige */
+  --bg-card: #ffffff;        /* Pure white */
+  --bg-nav: rgba(255, 255, 255, 0.95);
+  --bg-desktop: #d6d3cd;     /* Darker earth tone */
+
+  /* -- Text Colors -- */
+  --text-main: #1a1917;      /* "Espresso" */
+  --text-muted: #57534e;     /* "Stone" */
+  --text-brand: #1e40af;     /* "Cobalt Blue" */
+
+  /* -- Status Indicators -- */
+  --status-ok: #15803d;      
+  --status-warn: #b45309;    
+  --status-err: #b91c1c;     
+  
+  /* -- Shapes & Spacing -- */
+  --radius-lg: 16px;         
+  --radius-md: 12px;         
+  --radius-sm: 8px;          
+  
+  --shadow-sm: 0 1px 3px rgba(26, 25, 23, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(26, 25, 23, 0.15);
+}
+
+/* =========================================
+   2. RESET & BASE STYLES
+   ========================================= */
+html {
+  scroll-behavior: smooth; 
+}
+
+body {
+  margin: 0;
+  /* Use the System Sans-Serif Stack */
+  font-family: var(--font-main);
+  background-color: var(--bg-desktop); 
+  color: var(--text-main);
+  overflow: hidden; 
+  -webkit-font-smoothing: antialiased; 
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+h1, h2, h3 {
+  margin: 0 0 0.5rem 0;
+  font-weight: 700; 
+  /* System fonts look cleaner with slightly tighter tracking on headings */
+  letter-spacing: -0.02em; 
+  color: var(--text-main);
+}
+
+p {
+  margin: 0 0 1rem 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* =========================================
+   3. LAYOUT WRAPPER
+   ========================================= */
+.mobile-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: var(--bg-app);
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem; 
+  padding-bottom: 90px; 
+  -webkit-overflow-scrolling: touch; 
+}
+.content-area::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================
+   4. COMPONENT: DATA CARDS
+   ========================================= */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0,0,0,0.08); 
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 600; 
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* =========================================
+   5. COMPONENT: GRIDS & METRICS
+   ========================================= */
+.sensor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.metric-big {
+  /* Use the System Monospace Stack (SF Mono on iOS / Roboto Mono on Android) */
+  font-family: var(--font-code);
+  font-size: 2.25rem;
+  font-weight: 700; 
+  color: var(--text-brand); 
+  line-height: 1;
+  letter-spacing: -0.05em; 
+}
+.metric-unit {
+  font-family: var(--font-main); /* Keep units sans-serif */
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+/* =========================================
+   6. COMPONENT: BUTTONS & CONTROLS
+   ========================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  
+  font-weight: 600;
+  font-size: 1rem;
+  
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary {
+  background-color: var(--text-brand);
+  color: white; 
+}
+
+.btn-danger {
+  background-color: var(--bg-card);
+  color: var(--status-err);
+  border: 2px solid var(--status-err);
+}
+
+.btn:active {
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+/* =========================================
+   7. STATUS INDICATORS
+   ========================================= */
+.status-dot {
+  height: 12px; 
+  width: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+.status-ok { background-color: var(--status-ok); }
+.status-warn { background-color: var(--status-warn); }
+.status-err { background-color: var(--status-err); }
+
+/* =========================================
+   8. BOTTOM NAVIGATION (Full Width & Centered)
+   ========================================= */
+.bottom-nav {
+  position: absolute; 
+  bottom: 0;
+  left: 0;
+  width: 100%; 
+  height: 70px;
+  
+  background: var(--bg-nav);
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+  
+  padding-bottom: env(safe-area-inset-bottom); 
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--text-muted); 
+  font-size: 0.75rem; 
+  font-weight: 500;
+  
+  transition: color 0.2s ease;
+  width: 60px; 
+  cursor: pointer; 
+}
+
+.nav-item svg, .nav-item i {
+  font-size: 24px;
+  margin-bottom: 4px;
+  transition: transform 0.2s ease;
+}
+
+.nav-item.active {
+  color: var(--text-brand); 
+}
+
+.nav-item.active svg {
+  transform: translateY(-2px); 
+}

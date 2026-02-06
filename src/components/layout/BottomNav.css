@@ -1,0 +1,52 @@
+/* Container fixed to the bottom of the screen */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80px; /* Height of the bar */
+  
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0; /* Light gray border line */
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05); /* Subtle shadow lifting it up */
+  
+  display: flex;
+  justify-content: space-around; /* Spreads icons evenly */
+  align-items: center;
+  z-index: 1000; /* Ensures it sits on top of everything else */
+  padding-bottom: 10px; /* Extra padding for modern phones (iPhone swipe bar) */
+}
+
+/* Individual Navigation Item (Icon + Text) */
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  text-decoration: none; /* Removes underline from links */
+  color: #94a3b8; /* Default inactive color (Grey) */
+  font-size: 0.75rem; /* Small text for labels */
+  font-weight: 500;
+  
+  transition: color 0.2s ease; /* Smooth color change on click */
+  flex: 1; /* Makes touch target large */
+  height: 100%;
+}
+
+/* Space between Icon and Text */
+.nav-item span {
+  margin-top: 4px;
+}
+
+/* Active State (When you are on that tab) */
+.nav-item.active {
+  color: #1e293b; /* Dark color for active state */
+  font-weight: 700;
+}
+
+/* Active State Icon Scale (Optional pop effect) */
+.nav-item.active svg {
+  transform: scale(1.1);
+  transition: transform 0.2s;
+}
