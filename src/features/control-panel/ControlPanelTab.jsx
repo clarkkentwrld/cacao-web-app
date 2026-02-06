@@ -28,7 +28,7 @@ const ControlPanel = () => {
     large: 617
   });
 
-  // System Health Data
+  // System Health Data - Initialized safely
   const [systemHealth, setSystemHealth] = useState({
     cpu: { percent: 0, temp: 0 },
     memory: { percent: 0, used: 0, total: 0 },
@@ -43,7 +43,8 @@ const ControlPanel = () => {
         const response = await fetch(API_URL);
         if (response.ok && isMounted) {
           const data = await response.json();
-          setSystemHealth(data);
+          // Safety check: ensure data isn't null before setting
+          if (data) setSystemHealth(data);
         }
       } catch (error) {
         console.error("Error fetching status:", error);
@@ -70,6 +71,13 @@ const ControlPanel = () => {
   const handleNewBatch = () => console.log("Command: NEW BATCH");
   const handleContinue = () => console.log("Command: CONTINUE");
   const handleCameraError = () => setCameraError(true);
+
+  // --- SAFE VALUE HELPERS ---
+  // These helper variables prevent "undefined" crashes
+  const cpuPercent = systemHealth?.cpu?.percent || 0;
+  const memPercent = systemHealth?.memory?.percent || 0;
+  const stgPercent = systemHealth?.storage?.percent || 0;
+  const cpuTemp = systemHealth?.cpu?.temp || 0;
 
   return (
     <div className="control-container">
@@ -156,44 +164,44 @@ const ControlPanel = () => {
              {/* CPU */}
              <div className="status-row">
                 <span className="status-text">
-                  CPU ({systemHealth?.cpu?.percent ? systemHealth.cpu.percent.toFixed(1) : "0.0"}%)
+                  CPU ({cpuPercent.toFixed(1)}%)
                 </span>
                 <div className="track">
-                  <div className="fill fill-cpu" style={{ width: `${Math.min(systemHealth.cpu.percent, 100)}%` }}></div>
+                  <div className="fill fill-cpu" style={{ width: `${Math.min(cpuPercent, 100)}%` }}></div>
                 </div>
              </div>
 
              {/* Memory */}
              <div className="status-row">
                 <span className="status-text">
-                  Memory ({systemHealth.memory.percent.toFixed(1)}%)
+                  Memory ({memPercent.toFixed(1)}%)
                 </span>
                 <div className="track">
-                  <div className="fill fill-mem" style={{ width: `${Math.min(systemHealth.memory.percent, 100)}%` }}></div>
+                  <div className="fill fill-mem" style={{ width: `${Math.min(memPercent, 100)}%` }}></div>
                 </div>
              </div>
 
              {/* Storage */}
              <div className="status-row">
                 <span className="status-text">
-                  Storage ({systemHealth.storage.percent.toFixed(1)}%)
+                  Storage ({stgPercent.toFixed(1)}%)
                 </span>
                 <div className="track">
-                  <div className="fill fill-stg" style={{ width: `${Math.min(systemHealth.storage.percent, 100)}%` }}></div>
+                  <div className="fill fill-stg" style={{ width: `${Math.min(stgPercent, 100)}%` }}></div>
                 </div>
              </div>
 
              {/* Temperature */}
              <div className="status-row">
                 <span className="status-text">
-                  Temp ({systemHealth.cpu.temp}°C)
+                  Temp ({cpuTemp.toFixed(1)}°C)
                 </span>
                 <div className="track">
                   <div 
                     className="fill fill-temp" 
                     style={{ 
-                        width: `${Math.min(systemHealth.cpu.temp, 100)}%`,
-                        backgroundColor: systemHealth.cpu.temp > 80 ? '#ef4444' : '#22c55e'
+                        width: `${Math.min(cpuTemp, 100)}%`,
+                        backgroundColor: cpuTemp > 80 ? '#ef4444' : '#22c55e'
                     }}
                   ></div>
                 </div>

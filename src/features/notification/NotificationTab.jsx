@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FaInfoCircle, FaExclamationTriangle, FaCheckCircle, FaBell } from 'react-icons/fa';
-import './Notification.css'; // We will create this CSS next
+import './Notification.css'; 
+
+// Configuration
+const PI_IP = "192.168.254.119"; 
+const API_URL = `http://${PI_IP}:5000/api/notifications`;
 
 const NotificationTab = () => {
   const [notifications, setNotifications] = useState([]);
@@ -10,9 +14,11 @@ const NotificationTab = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/notifications');
-        const data = await response.json();
-        setNotifications(data);
+        const response = await fetch(API_URL);
+        if (response.ok) {
+            const data = await response.json();
+            setNotifications(data);
+        }
       } catch (error) {
         console.error("Error fetching notifications:", error);
       } finally {
@@ -21,7 +27,7 @@ const NotificationTab = () => {
     };
 
     fetchNotifications();
-    // Optional: Poll every 5 seconds to get new alerts automatically
+    // Poll every 5 seconds to get new alerts automatically
     const interval = setInterval(fetchNotifications, 5000);
     return () => clearInterval(interval);
   }, []);
