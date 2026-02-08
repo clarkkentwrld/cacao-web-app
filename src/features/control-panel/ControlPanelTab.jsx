@@ -5,13 +5,15 @@ import {
   Pause, 
   PlusSquare, 
   ArrowRightCircle, 
-  WifiOff 
+  WifiOff,
+  RefreshCw 
 } from 'lucide-react';
 import './ControlPanel.css'; 
 
 // Configuration
 const PI_IP = "192.168.254.119"; 
-const STREAM_URL = `http://${PI_IP}:5001/video_feed`;
+// Note: We use ports 5001 for Camera and 5002 for System Stats
+const BASE_STREAM_URL = `http://${PI_IP}:5001/video_feed`;
 const API_URL = `http://${PI_IP}:5002/api/system_status`;
 
 const ControlPanel = () => {
@@ -19,6 +21,9 @@ const ControlPanel = () => {
   const [isOn, setIsOn] = useState(false);
   const [isSorting, setIsSorting] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  
+  // FIX: Use a simple counter (0) instead of Date.now() to avoid linter errors
+  const [streamKey, setStreamKey] = useState(0);
   
   // Stats Data
   const [stats] = useState({
@@ -28,7 +33,7 @@ const ControlPanel = () => {
     large: 617
   });
 
-  // System Health Data - Initialized safely
+  // System Health Data
   const [systemHealth, setSystemHealth] = useState({
     cpu: { percent: 0, temp: 0 },
     memory: { percent: 0, used: 0, total: 0 },
@@ -37,16 +42,21 @@ const ControlPanel = () => {
 
   // --- API POLL ---
   useEffect(() => {
+    // Safety Check: Warn if using HTTPS (blocks camera)
+    if (window.location.protocol === 'https:') {
+      console.warn("⚠️ WARNING: You are using HTTPS. The camera stream (HTTP) will be blocked. Please use 'http://' instead.");
+    }
+
     let isMounted = true; 
     const fetchSystemStatus = async () => {
       try {
         const response = await fetch(API_URL);
         if (response.ok && isMounted) {
           const data = await response.json();
-          // Safety check: ensure data isn't null before setting
           if (data) setSystemHealth(data);
         }
       } catch (error) {
+        // Silent fail for stats is okay, we just keep old values
         console.error("Error fetching status:", error);
       }
     };
@@ -70,10 +80,20 @@ const ControlPanel = () => {
 
   const handleNewBatch = () => console.log("Command: NEW BATCH");
   const handleContinue = () => console.log("Command: CONTINUE");
-  const handleCameraError = () => setCameraError(true);
+  
+  // Camera Handlers
+  const handleCameraError = () => {
+    setCameraError(true);
+  };
+
+  const retryCamera = () => {
+    console.log("Retrying camera connection...");
+    setCameraError(false);
+    // FIX: Increment the counter to force React to reload the image
+    setStreamKey(prevKey => prevKey + 1);
+  };
 
   // --- SAFE VALUE HELPERS ---
-  // These helper variables prevent "undefined" crashes
   const cpuPercent = systemHealth?.cpu?.percent || 0;
   const memPercent = systemHealth?.memory?.percent || 0;
   const stgPercent = systemHealth?.storage?.percent || 0;
@@ -93,15 +113,31 @@ const ControlPanel = () => {
           <div className="camera-wrapper">
             {!cameraError ? (
               <img 
-                src={STREAM_URL}
+                // We append streamKey to force the browser to ignore cache
+                src={`${BASE_STREAM_URL}?t=${streamKey}`}
                 alt="Live Feed"
                 onError={handleCameraError}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666' }}>
-                <WifiOff size={28} style={{ marginBottom: '8px', opacity: 0.7 }} />
-                <span style={{ fontSize: '0.8rem' }}>Signal Lost</span>
+              <div 
+                onClick={retryCamera}
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  color: '#666',
+                  height: '100%',
+                  cursor: 'pointer',
+                  backgroundColor: '#f3f4f6'
+                }}
+              >
+                <WifiOff size={32} style={{ marginBottom: '8px', opacity: 0.7 }} />
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Signal Lost</span>
+                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', fontSize: '0.8rem', color: '#3b82f6' }}>
+                    <RefreshCw size={14} style={{ marginRight: '4px' }} /> Tap to Retry
+                </div>
               </div>
             )}
             <div className="camera-overlay">LIVE • 640x480</div>
