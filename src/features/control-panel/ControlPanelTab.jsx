@@ -12,7 +12,7 @@ import './ControlPanel.css';
 // Configuration
 const PI_IP = "192.168.254.119"; 
 const STREAM_URL = `http://${PI_IP}:5001/video_feed`;
-const API_URL = `http://${PI_IP}:5000/api/system_status`;
+const API_URL = `http://${PI_IP}:5002/api/system_status`;
 
 const ControlPanel = () => {
   // --- STATE ---

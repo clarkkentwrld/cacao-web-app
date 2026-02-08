@@ -1,17 +1,18 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+import psutil
 import sqlite3
 import datetime
 import os
-import psutil  # Added for RPi 5 hardware monitoring
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
+# Enable CORS for all domains so your frontend (on a different port) can access this
 CORS(app) 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'cacao_database.db')
 
-# --- DATABASE LOGIC ---
+# --- DATABASE SETUP ---
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -19,15 +20,14 @@ def get_db_connection():
     # --- RASPBERRY PI OPTIMIZATIONS ---
     # Enable Write-Ahead Logging (WAL) for concurrency and SD card health
     conn.execute("PRAGMA journal_mode=WAL;")
-    # Reduce sync frequency to be gentler on the SD card (safe in WAL mode)
+    # Reduce sync frequency to be gentler on the SD card
     conn.execute("PRAGMA synchronous=NORMAL;") 
     # ----------------------------------
-
+    
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
-    """Initializes the SQLite database for cacao batches."""
     conn = get_db_connection()
     conn.execute('''
         CREATE TABLE IF NOT EXISTS batches (
@@ -45,7 +45,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Run initialization (creates DB and sets WAL mode if not already set)
+# Initialize DB on startup
 init_db()
 
 def get_next_batch_number():
@@ -59,7 +59,7 @@ def get_next_batch_number():
     conn.close()
     return count + 1
 
-# --- HARDWARE MONITORING LOGIC ---
+# --- HARDWARE MONITORING ---
 
 def get_cpu_temp():
     """Reads the Raspberry Pi 5 CPU temperature."""
@@ -71,18 +71,39 @@ def get_cpu_temp():
     except Exception:
         return 0.0
 
-# --- API ENDPOINTS ---
-
 @app.route('/api/system_status', methods=['GET'])
 def get_system_status():
-    """Returns actual RPi 5 hardware usage stats."""
+    """Returns detailed RPi hardware usage stats (Values + Percentages)."""
+    
+    # Memory Details
+    mem = psutil.virtual_memory()
+    mem_used_gb = round(mem.used / (1024 ** 3), 1)
+    mem_total_gb = round(mem.total / (1024 ** 3), 1)
+
+    # Storage Details
+    disk = psutil.disk_usage('/')
+    disk_used_gb = round(disk.used / (1024 ** 3), 1)
+    disk_total_gb = round(disk.total / (1024 ** 3), 1)
+
     status = {
-        "cpu": psutil.cpu_percent(interval=None), # 'None' prevents blocking the Flask thread
-        "memory": psutil.virtual_memory().percent,
-        "storage": psutil.disk_usage('/').percent,
-        "temperature": get_cpu_temp()
+        "cpu": {
+            "percent": psutil.cpu_percent(interval=None),
+            "temp": get_cpu_temp()
+        },
+        "memory": {
+            "percent": mem.percent,
+            "used": mem_used_gb,
+            "total": mem_total_gb
+        },
+        "storage": {
+            "percent": disk.percent,
+            "used": disk_used_gb,
+            "total": disk_total_gb
+        }
     }
     return jsonify(status)
+
+# --- BATCH ENDPOINTS ---
 
 @app.route('/api/batches', methods=['GET'])
 def get_batches():
@@ -95,18 +116,17 @@ def get_batches():
 def add_batch():
     data = request.json
     next_num = get_next_batch_number()
-    
     conn = get_db_connection()
     conn.execute('''
         INSERT INTO batches (batch_number, total, large, medium, small, quality_good, quality_bad)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (
         next_num, 
-        data.get('total', 0),
-        data.get('large', 0),
-        data.get('medium', 0),
-        data.get('small', 0),
-        data.get('quality_good', 0),
+        data.get('total', 0), 
+        data.get('large', 0), 
+        data.get('medium', 0), 
+        data.get('small', 0), 
+        data.get('quality_good', 0), 
         data.get('quality_bad', 0)
     ))
     conn.commit()
@@ -114,5 +134,5 @@ def add_batch():
     return jsonify({"status": "success", "batch_number": next_num})
 
 if __name__ == '__main__':
-    # '0.0.0.0' allows your mobile app to connect via the Pi's IP address
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    # RUNNING ON PORT 5002 (To avoid conflict with Camera on 5001 and Frontend on 5000/5173)
+    app.run(debug=True, port=5002, host='0.0.0.0')
