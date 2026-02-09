@@ -27,3 +27,4 @@ backend/__pycache__/
 backend/venv/
 .DS_Store
 dist/
+state.json

@@ -11,58 +11,45 @@ import {
 import './ControlPanel.css'; 
 
 // Configuration
+// MAKE SURE THIS IP MATCHES YOUR RASPBERRY PI
 const PI_IP = "192.168.254.119"; 
-// Note: We use ports 5001 for Camera and 5002 for System Stats
+
+// Ports: 5001 for Camera, 5002 for Control/Status API
 const BASE_STREAM_URL = `http://${PI_IP}:5001/video_feed`;
 const API_URL = `http://${PI_IP}:5002/api/system_status`;
+const CONTROL_URL = `http://${PI_IP}:5002/api/control`;
 
 const ControlPanel = () => {
   // --- STATE ---
-  const [isOn, setIsOn] = useState(false);
-  const [isSorting, setIsSorting] = useState(false);
+  // We now store the entire system state from the backend here
+  const [systemData, setSystemData] = useState(null);
+  const [isOn, setIsOn] = useState(true); // Local power state (UI only for now)
   const [cameraError, setCameraError] = useState(false);
-  
-  // Stream key forces React to re-request the image when we retry
   const [streamKey, setStreamKey] = useState(0);
-  
-  // Stats Data
-  const [stats] = useState({
-    total: 1234,
-    small: 246,
-    medium: 370,
-    large: 617
-  });
 
-  // System Health Data
-  const [systemHealth, setSystemHealth] = useState({
-    cpu: { percent: 0, temp: 0 },
-    memory: { percent: 0, used: 0, total: 0 },
-    storage: { percent: 0, used: 0, total: 0 }
-  });
-
-  // --- API POLL ---
+  // --- 1. POLLING LOOP (Reads Data from RPi) ---
   useEffect(() => {
-    // Safety Check: Warn if using HTTPS (blocks camera)
+    // Check for HTTPS blockage
     if (window.location.protocol === 'https:') {
-      console.warn("⚠️ WARNING: You are using HTTPS. The camera stream (HTTP) will be blocked. Please use 'http://' instead.");
+      console.warn("⚠️ WARNING: You are using HTTPS. The camera stream (HTTP) will be blocked.");
     }
 
-    let isMounted = true; 
+    let isMounted = true;
     const fetchSystemStatus = async () => {
       try {
         const response = await fetch(API_URL);
         if (response.ok && isMounted) {
           const data = await response.json();
-          if (data) setSystemHealth(data);
+          setSystemData(data);
         }
       } catch (error) {
-        // Silent fail for stats is okay, we just keep old values
         console.error("Error fetching status:", error);
       }
     };
 
+    // Poll immediately and then every 1 second
     fetchSystemStatus(); 
-    const interval = setInterval(fetchSystemStatus, 2000); 
+    const interval = setInterval(fetchSystemStatus, 1000); 
 
     return () => {
       isMounted = false;
@@ -70,34 +57,66 @@ const ControlPanel = () => {
     };
   }, []);
 
-  // --- HANDLERS ---
-  const togglePower = () => setIsOn(!isOn);
-  
-  const toggleSort = () => {
-    console.log(isSorting ? "Command: PAUSE" : "Command: START");
-    setIsSorting(!isSorting);
+  // --- 2. COMMAND HANDLER (Sends Data to RPi) ---
+  const sendCommand = async (action) => {
+    try {
+      await fetch(CONTROL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: action })
+      });
+      
+      // Optional: Fetch immediately to make UI feel snappier
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setSystemData(data);
+      
+    } catch (error) {
+      console.error("Command Error:", error);
+    }
   };
 
-  const handleNewBatch = () => console.log("Command: NEW BATCH");
-  const handleContinue = () => console.log("Command: CONTINUE");
+  // --- HANDLERS ---
+  const toggleSort = () => {
+    // Sends "TOGGLE" command to server.py
+    sendCommand('TOGGLE');
+  };
+
+  const handleNewBatch = () => {
+    if(window.confirm("Start a new batch? This will reset counters.")) {
+      sendCommand('NEW_BATCH');
+    }
+  };
+
+  const handleContinue = () => {
+    sendCommand('CONTINUE');
+  };
+
+  const togglePower = () => {
+    // Logic for soft power toggle (UI only)
+    setIsOn(!isOn);
+  };
   
   // Camera Handlers
-  const handleCameraError = () => {
-    setCameraError(true);
-  };
-
+  const handleCameraError = () => setCameraError(true);
   const retryCamera = () => {
-    console.log("Retrying camera connection...");
     setCameraError(false);
-    // Increment the counter to force React to reload the image tag
     setStreamKey(prevKey => prevKey + 1);
   };
 
-  // --- SAFE VALUE HELPERS ---
-  const cpuPercent = systemHealth?.cpu?.percent || 0;
-  const memPercent = systemHealth?.memory?.percent || 0;
-  const stgPercent = systemHealth?.storage?.percent || 0;
-  const cpuTemp = systemHealth?.cpu?.temp || 0;
+  // --- DERIVED VALUES (Fail-safe) ---
+  // Access deep properties safely. If systemData is null (loading), use defaults.
+  const isSorting = systemData?.status?.is_sorting || false;
+  const currentBatchId = systemData?.status?.batch_id || "--";
+  
+  const stats = systemData?.counts || { 
+    total: 0, small: 0, medium: 0, large: 0 
+  };
+
+  const cpuPercent = systemData?.cpu?.percent || 0;
+  const memPercent = systemData?.memory?.percent || 0;
+  const stgPercent = systemData?.storage?.percent || 0;
+  const cpuTemp = systemData?.cpu?.temp || 0;
 
   return (
     <div className="control-container">
@@ -113,14 +132,12 @@ const ControlPanel = () => {
           <div className="camera-wrapper">
             {!cameraError ? (
               <img 
-                // We append streamKey to force the browser to ignore cache
                 src={`${BASE_STREAM_URL}?t=${streamKey}`}
                 alt="Live Feed"
                 onError={handleCameraError}
                 className="camera-feed"
               />
             ) : (
-              // UPDATED: Now uses CSS classes instead of inline styles
               <div onClick={retryCamera} className="camera-error">
                 <WifiOff size={48} className="error-icon" />
                 <span className="error-title">Signal Lost</span>
@@ -129,15 +146,13 @@ const ControlPanel = () => {
                 </div>
               </div>
             )}
-            
-            {/* Overlay only shows when camera is working or we want it to persist */}
             {!cameraError && <div className="camera-overlay">LIVE • 640x480</div>}
           </div>
 
           {/* 2. STATS SECTION */}
           <div className="stats-container">
             <div className="total-header">
-              <span className="label-text">Total Beans</span>
+              <span className="label-text">Total Beans (Batch #{currentBatchId})</span>
               <span className="total-value">{stats.total}</span>
             </div>
             
@@ -160,13 +175,19 @@ const ControlPanel = () => {
           {/* 3. CONTROLS GRID */}
           <div className="controls-grid">
             {/* Start/Stop Button */}
-            <button onClick={toggleSort} className={`control-btn ${isSorting ? 'btn-stop' : 'btn-start'}`}>
+            <button 
+              onClick={toggleSort} 
+              className={`control-btn ${isSorting ? 'btn-stop' : 'btn-start'}`}
+            >
               {isSorting ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" />}
               <span>{isSorting ? "STOP" : "START"}</span>
             </button>
 
             {/* Power Button */}
-            <button onClick={togglePower} className={`control-btn ${isOn ? 'btn-active' : 'btn-neutral'}`}>
+            <button 
+              onClick={togglePower} 
+              className={`control-btn ${isOn ? 'btn-active' : 'btn-neutral'}`}
+            >
               <Power size={28} />
               <span>POWER</span>
             </button>
@@ -184,7 +205,7 @@ const ControlPanel = () => {
             </button>
           </div>
 
-          {/* 4. SYSTEM STATUS (Detailed) */}
+          {/* 4. SYSTEM STATUS */}
           <div className="system-section">
              <div className="system-title">SYSTEM STATUS</div>
 
@@ -228,7 +249,6 @@ const ControlPanel = () => {
                     className="fill fill-temp" 
                     style={{ 
                         width: `${Math.min(cpuTemp, 100)}%`,
-                        // Dynamic color override for high temps
                         backgroundColor: cpuTemp > 80 ? '#ff3b30' : undefined 
                     }}
                   ></div>
