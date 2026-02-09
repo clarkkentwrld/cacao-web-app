@@ -22,7 +22,7 @@ const ControlPanel = () => {
   const [isSorting, setIsSorting] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   
-  // FIX: Use a simple counter (0) instead of Date.now() to avoid linter errors
+  // Stream key forces React to re-request the image when we retry
   const [streamKey, setStreamKey] = useState(0);
   
   // Stats Data
@@ -89,7 +89,7 @@ const ControlPanel = () => {
   const retryCamera = () => {
     console.log("Retrying camera connection...");
     setCameraError(false);
-    // FIX: Increment the counter to force React to reload the image
+    // Increment the counter to force React to reload the image tag
     setStreamKey(prevKey => prevKey + 1);
   };
 
@@ -117,30 +117,21 @@ const ControlPanel = () => {
                 src={`${BASE_STREAM_URL}?t=${streamKey}`}
                 alt="Live Feed"
                 onError={handleCameraError}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                className="camera-feed"
               />
             ) : (
-              <div 
-                onClick={retryCamera}
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  color: '#666',
-                  height: '100%',
-                  cursor: 'pointer',
-                  backgroundColor: '#f3f4f6'
-                }}
-              >
-                <WifiOff size={32} style={{ marginBottom: '8px', opacity: 0.7 }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Signal Lost</span>
-                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', fontSize: '0.8rem', color: '#3b82f6' }}>
-                    <RefreshCw size={14} style={{ marginRight: '4px' }} /> Tap to Retry
+              // UPDATED: Now uses CSS classes instead of inline styles
+              <div onClick={retryCamera} className="camera-error">
+                <WifiOff size={48} className="error-icon" />
+                <span className="error-title">Signal Lost</span>
+                <div className="retry-btn">
+                    <RefreshCw size={16} /> Tap to Retry
                 </div>
               </div>
             )}
-            <div className="camera-overlay">LIVE • 640x480</div>
+            
+            {/* Overlay only shows when camera is working or we want it to persist */}
+            {!cameraError && <div className="camera-overlay">LIVE • 640x480</div>}
           </div>
 
           {/* 2. STATS SECTION */}
@@ -237,7 +228,8 @@ const ControlPanel = () => {
                     className="fill fill-temp" 
                     style={{ 
                         width: `${Math.min(cpuTemp, 100)}%`,
-                        backgroundColor: cpuTemp > 80 ? '#ef4444' : '#22c55e'
+                        // Dynamic color override for high temps
+                        backgroundColor: cpuTemp > 80 ? '#ff3b30' : undefined 
                     }}
                   ></div>
                 </div>
